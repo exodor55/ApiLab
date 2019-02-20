@@ -1,12 +1,13 @@
 //Create the stage for the pixi app, size x y and background color
-
 let app = new PIXI.Application(1000, 1000, {backgroundColor : 0xCD853F	});
+
+//Append the document, add app to it so it is viewable
 document.body.appendChild(app.view);
 
 // Scale mode for all textures, will retain pixelation
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
-//Declare sprite
+//Declare a sprite variable. 
 let sprite = PIXI.Sprite.fromImage("ant.png");
 
 // Set the initial anchor position of the rotatable sprite (positioning of the sprite)
@@ -14,45 +15,46 @@ sprite.anchor.set(0.5);
 sprite.x = app.screen.width / 2;
 sprite.y = app.screen.height / 2;
 
-// Enable the sprite to interactivity in relation to user input
+// Enable the sprite to interactivity in relation to user input (in this case, a mouse click)
 sprite.interactive = true;
 
-// Shows hand cursor
+// Shows hand cursor (interactivity related)
 sprite.buttonMode = true;
 
 // Pointers which normalize the mouse
 sprite.on('pointerdown', onClick);
 
-// Add child to the app
+// Add the child, the sprite, to the app view
 app.stage.addChild(sprite);
 
-// function to handle onClick for the large sprite 
+// function to handle the onClick event for the interactive sprite sprite 
 function onClick () {
     //If alt key is pressed, true, scale positive
- if(event.altKey){
-    sprite.scale.x += 0.1;
-    sprite.scale.y += 0.1;
- } 
-   //If shift key is pressed, true, scale negative
- if(event.shiftKey){
-    sprite.scale.x -= 0.1;
-    sprite.scale.y -= 0.1;
- }
-   //if ctrl key is pressed, true, rotate left, otherwise, default, right
- if(event.ctrlKey){
-      sprite.rotation -= 0.5;     
-} else {
-    sprite.rotation += 0.5;
-}
+    if (event.altKey){
+        sprite.scale.x += 0.1;
+        sprite.scale.y += 0.1;
+    } 
+    //If shift key is pressed, true, scale negative
+    if (event.shiftKey){
+        sprite.scale.x -= 0.1;
+        sprite.scale.y -= 0.1;
+    }
+    //If ctrl key is pressed, true, rotate left, otherwise, default, right
+    if (event.ctrlKey){
+        sprite.rotation -= 0.5;     
+    } else {
+        sprite.rotation += 0.5;
+    }
 
 }
 
-// create a texture from an image path
-let texture = PIXI.Texture.fromImage('ant.png');
+// Create a texture from an image path for the mass sprites (in this case, worker ants)
+let texture = PIXI.Texture.fromImage("ant.png");
 
 // Scale mode for pixelation
 texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
 
+// for loop which utilizes the createImageSprite function and randomly places the ants on the app screen
 for (let i = 0; i < 10; i++) {
     createImageSprite(
         Math.floor(Math.random() * app.screen.width),
@@ -60,10 +62,10 @@ for (let i = 0; i < 10; i++) {
     );
 }
 
-//Function which handles the creation of the image
+//Function which handles the creation of the image, in this case a worker ant
 function createImageSprite(x, y) {
 
-    // Create ImageSprite from Texture
+    // Create ImageSprite from texture
     let imageSprite = new PIXI.Sprite(texture);
 
     // Enable ImageSprite interactivity, susceptible to user input
@@ -78,8 +80,7 @@ function createImageSprite(x, y) {
     // Image resizing, set according to image. 
     imageSprite.scale.set(1);
 
-    // Events for the mouse
-    
+    // Events for the mouse when it comes to dragging, selecting, dropping etc
     imageSprite
          .on('mousedown', onDragStart)
          .on('mouseup', onDragEnd)
@@ -90,11 +91,11 @@ function createImageSprite(x, y) {
     imageSprite.x = x;
     imageSprite.y = y;
     
-
     // Add the imageSprite to the document, the pixi stage. 
     app.stage.addChild(imageSprite);
 }
 
+//Function which handles on drag start
 function onDragStart(event) {
     //Store data to record movement
     this.data = event.data;
@@ -103,6 +104,7 @@ function onDragStart(event) {
     
 }
 
+//Function which handles on drag end
 function onDragEnd() {
     this.alpha = 1;
     this.dragging = false;
@@ -111,6 +113,7 @@ function onDragEnd() {
     
 }
 
+//Function which handles drag move, places it on the dropped position and saves
 function onDragMove() {
     if (this.dragging) {
         let newPosition = this.data.getLocalPosition(this.parent);
@@ -118,3 +121,9 @@ function onDragMove() {
         this.y = newPosition.y;
     }
 }
+
+/*
+Code using PixiJS v4 and native JavaScript
+Program created through the aid of various tutorials and examples from the official pixiJS examples websites ( https://pixijs.io/examples )
+Example 1 by Jovan
+*/
