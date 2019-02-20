@@ -1,191 +1,146 @@
-let app = new PIXI.Application(screen.width, screen.height, {backgroundColor : 0xFFFFFF});
+let app = new PIXI.Application(screen.width, screen.height);
 document.body.appendChild(app.view);
 
-let bol = false;
+// Create background image
+let background = PIXI.Sprite.fromImage("fam.png");
+background.width = app.screen.width;
+background.height = app.screen.height;
+app.stage.addChild(background);
 
-// create a texture from an image path
-let texture = PIXI.Texture.fromImage('peter.png');
+let shaderFrag = `
+precision mediump float;
 
-// create a second texture
-let secondTexture = PIXI.Texture.fromImage('stewie.png');
+uniform vec2 mouse;
+uniform vec2 resolution;
+uniform float time;
 
-// create a new Sprite using the texture
-let dude = new PIXI.Sprite(texture);
+void main() {
+  //pixel coords are inverted in framebuffer
+  vec2 pixelPos = vec2(gl_FragCoord.x, resolution.y - gl_FragCoord.y);
+  if (length(mouse - pixelPos) < 25.0) {
+      gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * 0.7; //yellow circle, alpha=0.7
+  } else {
+      gl_FragColor = vec4( sin(time), mouse.x/resolution.x, mouse.y/resolution.y, 1) * 0.5; // blend with underlying image, alpha=0.5
+  }
+}
+`;
 
-// center the sprites anchor point
-dude.anchor.set(0.5);
+let container = new PIXI.Container();
+container.filterArea = app.screen;
+app.stage.addChild(container);
+let filter = new PIXI.Filter(null, shaderFrag);
+container.filters = [filter];
 
-// move the sprite to the center of the screen
-dude.x = app.screen.width / 2;
-dude.y = app.screen.height / 2;
+// Animate the filter
+app.ticker.add(function(delta) {
+    let v2 = filter.uniforms.mouse;
+    let global = app.renderer.plugins.interaction.mouse.global;
+    v2[0] = global.x; v2[1] = global.y;
+    filter.uniforms.mouse = v2;
 
-app.stage.addChild(dude);
+    v2 = filter.uniforms.resolution;
+    v2[0] = app.screen.width;
+    v2[1] = app.screen.height;
+    filter.uniforms.resolution = v2;
+});
 
-// make the sprite interactive
-dude.interactive = true;
-dude.buttonMode = true;
 
-dude.on('pointertap', function() {
-    bol = !bol;
-    if (bol) {
-        dude.texture = secondTexture;
+
+// 2
+document.body.appendChild(app.view);
+
+// create some textures from an image path
+let textureButton = PIXI.Texture.fromImage('monkey.png');
+let textureButtonDown = PIXI.Texture.fromImage('fart.png');
+let textureButtonOver = PIXI.Texture.fromImage('griffin.png');
+
+let buttons = [];
+
+let buttonPositions = [
+    1500, 280,
+    605, 260,
+    1040, 600,
+    580, 850,
+    1500, 800
+];
+
+for (let i = 0; i < 5; i++) {
+
+    let button = new PIXI.Sprite(textureButton);
+    button.buttonMode = true;
+
+    button.anchor.set(0.5);
+    button.x = buttonPositions[i*2];
+    button.y = buttonPositions[i*2 + 1];
+
+    // make the button interactive...
+    button.interactive = true;
+    button.buttonMode = true;
+
+    button
+        // Mouse & touch events are normalized into
+        // the pointer* events for handling different
+        // button events.
+        .on('pointerdown', onButtonDown)
+        .on('pointerup', onButtonUp)
+        .on('pointerupoutside', onButtonUp)
+        .on('pointerover', onButtonOver)
+        .on('pointerout', onButtonOut);
+
+        // Use mouse-only events
+        // .on('mousedown', onButtonDown)
+        // .on('mouseup', onButtonUp)
+        // .on('mouseupoutside', onButtonUp)
+        // .on('mouseover', onButtonOver)
+        // .on('mouseout', onButtonOut)
+
+        // Use touch-only events
+        // .on('touchstart', onButtonDown)
+        // .on('touchend', onButtonUp)
+        // .on('touchendoutside', onButtonUp)
+
+    // add it to the stage
+    app.stage.addChild(button);
+
+    // add button to array
+    buttons.push(button);
+}
+
+// set some silly values...
+buttons[0].scale.set(1.2);
+buttons[2].rotation = Math.PI / 10;
+buttons[3].scale.set(0.8);
+buttons[4].scale.set(0.8,1.2);
+buttons[4].rotation = Math.PI;
+
+function onButtonDown() {
+    this.isdown = true;
+    this.texture = textureButtonDown;
+    this.alpha = 1;
+}
+
+function onButtonUp() {
+    this.isdown = false;
+    if (this.isOver) {
+        this.texture = textureButtonOver;
     }
     else {
-        dude.texture = texture;
+        this.texture = textureButton;
     }
-});
-
-app.ticker.add(function() {
-    // just for fun, let's rotate mr rabbit a little
-    dude.rotation += 0.01;
-});
-
-
-
-
-
-
-
-//second example (LAYERS/Z-order)
-
-//Aliases
-let Application = PIXI.Application,
-    Container = PIXI.Container,
-    loader = PIXI.loader,
-    resources = PIXI.loader.resources,
-    TextureCache = PIXI.utils.TextureCache,
-    Sprite = PIXI.Sprite;
-
-
-//Add the canvas that Pixi automatically created for you to the HTML document
-document.body.appendChild(app.view);
-
-loader
-  .add("Family.png")
-  .load(setup);
-
-//Define any variables that are used in more than one function
-let cat, state;
-
-function setup() {
-
-  //Create the cat sprite 
-  cat = new Sprite(resources["Family.png"].texture);
-  cat.y = 96; 
-  cat.vx = 0;
-  cat.vy = 0;
-  app.stage.addChild(cat);
-
-  //Capture the keyboard arrow keys
-  let left = keyboard(37),
-      up = keyboard(38),
-      right = keyboard(39),
-      down = keyboard(40);
-
-  //Left arrow key press method
-  left.press = () => {
-    //Change the cat's velocity when the key is pressed
-    cat.vx = -5;
-    cat.vy = 0;
-  };
-  
-  //Left arrow key release method
-  left.release = () => {
-    //If the left arrow has been released, and the right arrow isn't down,
-    //and the cat isn't moving vertically:
-    //Stop the cat
-    if (!right.isDown && cat.vy === 0) {
-      cat.vx = 0;
-    }
-  };
-
-  //Up
-  up.press = () => {
-    cat.vy = -5;
-    cat.vx = 0;
-  };
-  up.release = () => {
-    if (!down.isDown && cat.vx === 0) {
-      cat.vy = 0;
-    }
-  };
-
-  //Right
-  right.press = () => {
-    cat.vx = 5;
-    cat.vy = 0;
-  };
-  right.release = () => {
-    if (!left.isDown && cat.vy === 0) {
-      cat.vx = 0;
-    }
-  };
-
-  //Down
-  down.press = () => {
-    cat.vy = 5;
-    cat.vx = 0;
-  };
-  down.release = () => {
-    if (!up.isDown && cat.vx === 0) {
-      cat.vy = 0;
-    }
-  };
-
-  //Set the game state
-  state = play;
- 
-  //Start the game loop 
-  app.ticker.add(delta => gameLoop(delta));
 }
 
-function gameLoop(delta){
-
-  //Update the current game state:
-  state(delta);
+function onButtonOver() {
+    this.isOver = true;
+    if (this.isdown) {
+        return;
+    }
+    this.texture = textureButtonOver;
 }
 
-function play(delta) {
-
-  //Use the cat's velocity to make it move
-  cat.x += cat.vx;
-  cat.y += cat.vy
-}
-
-//The keyboard helper function
-function keyboard(keyCode) {
-  let key = {};
-  key.code = keyCode;
-  key.isDown = false;
-  key.isUp = true;
-  key.press = undefined;
-  key.release = undefined;
-  //The downHandler
-  key.downHandler = event => {
-    if (event.keyCode === key.code) {
-      if (key.isUp && key.press) key.press();
-      key.isDown = true;
-      key.isUp = false;
+function onButtonOut() {
+    this.isOver = false;
+    if (this.isdown) {
+        return;
     }
-    event.preventDefault();
-  };
-
-  //The upHandler
-  key.upHandler = event => {
-    if (event.keyCode === key.code) {
-      if (key.isDown && key.release) key.release();
-      key.isDown = false;
-      key.isUp = true;
-    }
-    event.preventDefault();
-  };
-
-  //Attach event listeners
-  window.addEventListener(
-    "keydown", key.downHandler.bind(key), false
-  );
-  window.addEventListener(
-    "keyup", key.upHandler.bind(key), false
-  );
-  return key;
+    this.texture = textureButton;
 }
