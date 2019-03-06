@@ -46,7 +46,7 @@ app.ticker.add(function(delta) {
 
 
 
-// 2
+//
 document.body.appendChild(app.view);
 
 // create some textures from an image path
@@ -78,9 +78,8 @@ for (let i = 0; i < 5; i++) {
     button.buttonMode = true;
 
     button
-        // Mouse & touch events are normalized into
-        // the pointer* events for handling different
-        // button events.
+        // Mouse eventListener
+        
         .on('pointerdown', onButtonDown)
         .on('pointerup', onButtonUp)
         .on('pointerupoutside', onButtonUp)
@@ -106,7 +105,7 @@ for (let i = 0; i < 5; i++) {
     buttons.push(button);
 }
 
-// set some silly values...
+// set values
 buttons[0].scale.set(1.2);
 buttons[2].rotation = Math.PI / 10;
 buttons[3].scale.set(0.8);
