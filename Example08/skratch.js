@@ -1,90 +1,108 @@
-var app = new PIXI.Application(800, 600, );
+let app = new PIXI.Application(800, 600, {backgroundColor : 0x0});
 document.body.appendChild(app.view);
 
 //Get the texture for rope.
-var trailTexture = PIXI.Texture.fromImage('examples/assets/trail.png')
-var historyX = [];
-var historyY = [];
-//historySize determines how long the trail will be.
-var historySize = 20;
-//ropeSize determines how smooth the trail will be.
-var ropeSize = 100;
-var points = [];
+let starTexture = PIXI.Texture.fromImage('star.png')
 
-//Create history array.
-for( var i = 0; i < historySize; i++)
+let starAmount = 1000;
+let cameraZ = 0;
+let fov = 20;
+let baseSpeed = 0.025;
+let speed = 0;
+let warpSpeed = 0;
+let starStretch = 5;
+let starBaseSize = 0.05;
+
+
+//Create the stars
+let stars = [];
+for(let i = 0; i < starAmount; i++)
 {
-	historyX.push(0);
-	historyY.push(0);
+	let star = {
+		sprite: new PIXI.Sprite(starTexture),
+		z:0,
+		x:0,
+		y:0
+	};
+	star.sprite.anchor.x = 0.5;
+	star.sprite.anchor.y = 0.7;
+	randomizeStar(star,true);
+	app.stage.addChild(star.sprite);
+	stars.push(star);
 }
-//Create rope points.
-for(var i = 0; i < ropeSize; i++)
+
+function randomizeStar(star,initial)
 {
-	points.push(new PIXI.Point(0,0));
+	star.z = initial ? Math.random()*2000 : cameraZ + Math.random()*1000+2000;
+	
+	//Calculate star positions random so no star hits the camera.
+	let deg = Math.random()*Math.PI*2;
+	let distance = Math.random()*50+1;
+	star.x = Math.cos(deg)*distance;
+	star.y = Math.sin(deg)*distance;
 }
 
-//Create the rope
-var rope = new PIXI.mesh.Rope(trailTexture, points);
-
-//Set the blendmode
-rope.blendmode = PIXI.BLEND_MODES.ADD;
-
-app.stage.addChild(rope);
+//Change speed of stars every 5 seconds
+setInterval(function(){
+	warpSpeed = warpSpeed > 0 ? 0 : 1;
+},5000)
 
 // Listen for animate update
 app.ticker.add(function(delta) {
-	//Read mouse points, this could be done also in mousemove/touchmove update. For simplicity it is done here for now.
-	//When implemeting this properly, make sure to implement touchmove as interaction plugins mouse might not update on certain devices.
-	var mouseposition = app.renderer.plugins.interaction.mouse.global;
-	
-	//Update the mouse values to history
-	historyX.pop();
-	historyX.unshift(mouseposition.x);
-	historyY.pop();
-	historyY.unshift(mouseposition.y);
-	//Update the points to correspond with history.
-	for( var i = 0; i < ropeSize; i++)
+	//Easing
+	speed += (warpSpeed-speed)/20;
+	cameraZ += delta*10*(speed+baseSpeed);
+	for(let i = 0; i < starAmount; i++)
 	{
-		var p = points[i];
+		let star = stars[i];
+		if(star.z < cameraZ)
+			randomizeStar(star);
 		
-		//Smooth the curve with cubic interpolation to prevent sharp edges.
-		var ix = cubicInterpolation( historyX, i / ropeSize * historySize);
-		var iy = cubicInterpolation( historyY, i / ropeSize * historySize);
+		//Star 3d position to 2d
+		let z = star.z - cameraZ;
+		star.sprite.x = star.x * (fov / z)*app.renderer.screen.width+app.renderer.screen.width/2;
+		star.sprite.y = star.y * (fov / z)*app.renderer.screen.width+app.renderer.screen.height/2;
 		
-		p.x = ix;
-		p.y = iy;
+		//Star scale & rotation.
+		let dxCenter = star.sprite.x - app.renderer.screen.width/2;
+		let dyCenter = star.sprite.y - app.renderer.screen.height/2;
+		let distanceCenter = Math.sqrt( dxCenter*dxCenter + dyCenter+dyCenter);
+		let distanceScale = Math.max(0, (2000-z)/2000);
+		star.sprite.scale.x = distanceScale*starBaseSize;
+		//Star is looking towards center so that y axis is towards center.
+		//Scale the star depending on how fast we are moving.
+		star.sprite.scale.y = distanceScale*starBaseSize + distanceScale*speed*starStretch*distanceCenter/app.renderer.screen.width;
+		star.sprite.rotation = Math.atan2(dyCenter, dxCenter)+Math.PI/2;
 		
 	}
 });
 
-/**
- * Cubic interpolation based on https://github.com/osuushi/Smooth.js
- * @param	k
- * @return
- */
-function clipInput(k, arr)
-{
-	if (k < 0)
-		k = 0;
-	if (k > arr.length - 1)
-		k = arr.length - 1;
-	return arr[k];
-}
 
-function getTangent(k, factor, array)
-{
-	return factor * (clipInput(k + 1, array) - clipInput(k - 1,array)) / 2;
-}
 
-function cubicInterpolation(array, t, tangentFactor)
-{
-	if (tangentFactor == null) tangentFactor = 1;
-	
-	var k = Math.floor(t);
-	var m = [getTangent(k, tangentFactor, array), getTangent(k + 1, tangentFactor, array)];
-	var p = [clipInput(k,array), clipInput(k+1,array)];
-	t -= k;
-	var t2 = t * t;
-	var t3 = t * t2;
-	return (2 * t3 - 3 * t2 + 1) * p[0] + (t3 - 2 * t2 + t) * m[0] + ( -2 * t3 + 3 * t2) * p[1] + (t3 - t2) * m[1];
+// Scale mode 
+PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+
+let sprite = PIXI.Sprite.fromImage('frog.png');
+
+// Set position
+sprite.anchor.set(0.5);
+sprite.x = app.screen.width / 1;
+sprite.y = app.screen.height / 1;
+
+// interactivity
+sprite.interactive = true;
+
+// Shows hand cursor
+sprite.buttonMode = true;
+
+// Touch and mouse
+sprite.on('pointerdown', onClick);
+
+// Use the mouse & touch events:
+
+app.stage.addChild(sprite);
+
+function onClick () {
+    sprite.scale.x *= 0.9;
+    sprite.scale.y *= 0.9;
 }
